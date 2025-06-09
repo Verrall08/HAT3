@@ -16,6 +16,10 @@
 -->
 {% block content %}
 <!-- A heading welcoming the user. current_user is the logged-in user provided by Flask-Login -->
-<h2>Welcome, {{ current_user.email }}!</h2>
-<p>This is your dashboard.</p>
+{% if current_user.is_admin %}
+  <h2>Welcome, {{ current_user.email }}!</h2>
+  <p>This is your dashboard. you are super admin</p>
+{% else %}
+  <p>Normal Dashboard</p>
+{% endif %}
 {% endblock %}

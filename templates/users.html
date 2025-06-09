@@ -20,13 +20,13 @@
       For each user, it creates a new row in the table with their data.
     -->
     {% for user in users %}
-    <tr>
+    <tr>  
       <td>{{ user.id }}</td>
       <td>{{ user.email }}</td>
       <!-- Show 'Yes' if user is admin, otherwise 'No' -->
       <td>{{ 'Yes' if user.is_admin else 'No' }}</td>
     </tr>
     {% endfor %}
-  </tbody>
+  </tbody>  
 </table>
 {% endblock %}
