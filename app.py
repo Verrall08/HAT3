@@ -92,6 +92,17 @@ def logout():
     logout_user()
     return redirect(url_for("login"))
 
+@app.route("/quiz")
+@login_required
+def quiz():
+    return render_template("quiz.html")
+
+
+@app.route("/manage_quiz")
+@login_required
+def manage_quiz():
+    return render_template("manage_quiz.html")
+
 
 @app.route("/dashboard")
 @login_required

@@ -1,24 +1,45 @@
-<!--
-  This template extends base.html, meaning it reuses the layout from base.html
-  Only the content inside the block sections will be different.
--->
 {% extends "base.html" %}
-
-<!--
-  This block replaces the <title> in base.html with "Dashboard".
-  This shows up in the browser tab.
--->
 {% block title %}Dashboard{% endblock %}
-
-<!--
-  This block fills in the main page content section defined in base.html.
-  Anything in here will appear inside the <div class="container"> in base.html.
--->
 {% block content %}
-<!-- A heading welcoming the user. current_user is the logged-in user provided by Flask-Login -->
 {% if current_user.is_admin %}
   <h2>Welcome, {{ current_user.email }}!</h2>
   <p>This is your dashboard. you are super admin</p>
+  <div class="row row-cols-1 row-cols-md-3 g-4">
+
+  <div class="col">
+    <div class="card h-100 shadow-sm border-0 bg-light hover-card">
+      <div class="card-body text-center">
+        <i class="fas fa-user-cog fa-2x mb-3 text-primary"></i>
+        <h5 class="card-title">Your Account</h5>
+        <p class="card-text">Change your password here.</p>
+        <a href="{{ url_for('account') }}" class="btn btn-primary">Manage Account</a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col">
+    <div class="card h-100 shadow-sm border-0 bg-light hover-card">
+      <div class="card-body text-center">
+        <i class="fas fa-users fa-2x mb-3 text-secondary"></i>
+        <h5 class="card-title">User Directory</h5>
+        <p class="card-text">View and manage all user accounts.</p>
+        <a href="{{ url_for('users') }}" class="btn btn-dark">View Users</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="card h-100 shadow-sm border-0 bg-light hover-card">
+      <div class="card-body text-center">
+        <i class="fas fa-sign-out-alt fa-2x mb-3 text-danger"></i>
+        <h5 class="card-title">Logout</h5>
+        <p class="card-text">Log out of your admin session.</p>
+        <a href="{{ url_for('logout') }}" class="btn btn-danger">Logout</a>
+      </div>
+    </div>
+  </div>
+
+</div>
 {% else %}
   <p>Normal Dashboard</p>
 {% endif %}
