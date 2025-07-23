@@ -1,6 +1,74 @@
 {% extends "base.html" %}
-{% block title %}Quiz{% endblock %}
+{% block title %}Manage Quiz{% endblock %}
 {% block content %}
-<h2>Welcome!</h2>
-  <p>These are your managed quizes</p>
+<h2>Manage Quizzes</h2>
+<form method="POST" action="{{ url_for('manage_quiz') }}">
+  <div class="mb-3">
+    <label for="title" class="form-label">Quiz Title</label>
+    <input type="text" class="form-control" id="title" name="title" required>
+  </div>
+  <div class="mb-3">
+    <label for="num_questions" class="form-label">Number of Questions</label>
+    <input type="number" class="form-control" id="num_questions" name="num_questions" min="1" max="20" value="3" required>
+  </div>
+  <div id="questions-container"></div>
+  <button type="submit" class="btn btn-success mt-3">Create Quiz</button>
+</form>
+
+<script>
+function renderQuestions() {
+  const num = parseInt(document.getElementById('num_questions').value) || 1;
+  const container = document.getElementById('questions-container');
+  container.innerHTML = '';
+  for (let i = 1; i <= num; i++) {
+    container.innerHTML += `
+      <div class="mb-3 border p-2 rounded">
+        <label>Question ${i}</label>
+        <input type="text" class="form-control mb-1" name="question_${i}" placeholder="Question text" required>
+        <label>Type</label>
+        <select class="form-select mb-1" name="type_${i}" onchange="toggleOptions(this, ${i})" required>
+          <option value="multiple">Multiple Choice</option>
+          <option value="short">Short Answer</option>
+          <option value="long">Long Answer</option>
+        </select>
+        <div id="options_${i}">
+          <input type="text" class="form-control mb-1" name="option_a_${i}" placeholder="Option A" required>
+          <input type="text" class="form-control mb-1" name="option_b_${i}" placeholder="Option B" required>
+          <input type="text" class="form-control mb-1" name="option_c_${i}" placeholder="Option C" required>
+          <input type="text" class="form-control mb-1" name="option_d_${i}" placeholder="Option D" required>
+          <select class="form-select mb-1" name="correct_${i}" required>
+            <option value="">Correct Option</option>
+            <option value="a">A</option>
+            <option value="b">B</option>
+            <option value="c">C</option>
+            <option value="d">D</option>
+          </select>
+        </div>
+        <label>Points</label>
+        <input type="number" class="form-control mb-1" name="points_${i}" min="1" value="1" required>
+      </div>
+    `;
+  }
+}
+function toggleOptions(select, i) {
+  const optionsDiv = document.getElementById(`options_${i}`);
+  if (select.value === 'multiple') {
+    optionsDiv.style.display = 'block';
+    Array.from(optionsDiv.querySelectorAll('input,select')).forEach(e => e.required = true);
+  } else {
+    optionsDiv.style.display = 'none';
+    Array.from(optionsDiv.querySelectorAll('input,select')).forEach(e => e.required = false);
+  }
+}
+document.getElementById('num_questions').addEventListener('input', renderQuestions);
+window.onload = renderQuestions;
+</script>
+
+<hr>
+<h3>Existing Quizzes</h3>
+<ul>
+  {% for quiz in quizzes %}
+    <li>{{ quiz.title }} ({{ quiz.questions|length }} questions)</li>
+  {% endfor %}
+</ul>
 {% endblock %}

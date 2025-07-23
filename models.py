@@ -35,3 +35,22 @@ class User(UserMixin, db.Model):
     # String representation of the user object (for debugging)
     def __repr__(self):
         return f"<User {self.email}>"
+
+
+class Quiz(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(100), nullable=False)
+    questions = db.relationship('Question', backref='quiz', lazy=True)
+
+
+class Question(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    quiz_id = db.Column(db.Integer, db.ForeignKey('quiz.id'), nullable=False)
+    text = db.Column(db.String(255), nullable=False)
+    type = db.Column(db.String(20), nullable=False, default='multiple')  # 'multiple', 'short', 'long'
+    option_a = db.Column(db.String(100))
+    option_b = db.Column(db.String(100))
+    option_c = db.Column(db.String(100))
+    option_d = db.Column(db.String(100))
+    correct_option = db.Column(db.String(1))
+    points = db.Column(db.Integer, default=1)
