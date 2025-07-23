@@ -29,7 +29,6 @@ function renderQuestions() {
         <select class="form-select mb-1" name="type_${i}" onchange="toggleOptions(this, ${i})" required>
           <option value="multiple">Multiple Choice</option>
           <option value="short">Short Answer</option>
-          <option value="long">Long Answer</option>
         </select>
         <div id="options_${i}">
           <input type="text" class="form-control mb-1" name="option_a_${i}" placeholder="Option A" required>
@@ -63,12 +62,4 @@ function toggleOptions(select, i) {
 document.getElementById('num_questions').addEventListener('input', renderQuestions);
 window.onload = renderQuestions;
 </script>
-
-<hr>
-<h3>Existing Quizzes</h3>
-<ul>
-  {% for quiz in quizzes %}
-    <li>{{ quiz.title }} ({{ quiz.questions|length }} questions)</li>
-  {% endfor %}
-</ul>
 {% endblock %}

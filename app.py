@@ -13,7 +13,7 @@ from models import db, User
 from forms import RegisterForm, LoginForm, EditAccountForm
 from config import Config   
 from seed_db import seed_default_users
-from models import Quiz, Question
+from models import Quiz, Question, QuizSubmission
 
 # Create the Flask app instance
 app = Flask(__name__)
@@ -179,11 +179,20 @@ def manage_quiz():
     quizzes = Quiz.query.all()
     return render_template('manage_quiz.html', quizzes=quizzes)
 
+@app.route('/delete_quiz/<int:quiz_id>', methods=['POST'])
+def delete_quiz(quiz_id):
+    Quiz.query.filter_by(id=quiz_id).delete()
+    db.session.commit()
+    return redirect(url_for('manage_quiz'))
 
 @app.route("/dashboard")
 @login_required
 def dashboard():
-    """Render the dashboard page for logged-in users."""
+    # Check for marked submissions
+    marked_submissions = QuizSubmission.query.filter_by(user_id=current_user.id, marked=True).all()
+    for sub in marked_submissions:
+        if sub.score is not None:
+            flash(f"Your quiz '{sub.quiz.title}' has been marked. Score: {sub.score}", "info")
     return render_template("dashboard.html")
 
 
@@ -223,6 +232,67 @@ def users():
     all_users = User.query.all()
     return render_template("users.html", users=all_users)
 
+
+@app.route('/submit_quiz_for_review', methods=['POST'])
+@login_required
+def submit_quiz_for_review():
+    quiz_id = request.form.get('quiz_id')
+    if not quiz_id:
+        flash('Quiz ID missing.', 'danger')
+        return redirect(url_for('quiz'))
+    try:
+        quiz_id = int(quiz_id)
+    except ValueError:
+        flash('Invalid Quiz ID.', 'danger')
+        return redirect(url_for('quiz'))
+    questions = Question.query.filter_by(quiz_id=quiz_id).all()
+    answers = {}
+    for q in questions:
+        answers[str(q.id)] = request.form.get(f'question_{q.id}', '')
+    submission = QuizSubmission(
+        user_id=current_user.id,
+        quiz_id=quiz_id,
+        answers=answers
+    )
+    db.session.add(submission)
+    db.session.commit()
+    flash("Your quiz has been submitted for review. You will be notified once it is marked.")
+    return redirect(url_for('quiz'))
+
+@app.route('/admin/mark_quizzes')
+def admin_mark_quizzes():
+    submissions = QuizSubmission.query.filter_by(marked=False).all()
+    return render_template('admin_mark_quizzes.html', submissions=submissions)
+
+@app.route('/admin/mark_quiz/<int:submission_id>', methods=['GET', 'POST'])
+@login_required
+def admin_mark_quiz(submission_id):
+    if not current_user.is_admin:
+        flash("Access denied.", "danger")
+        return redirect(url_for("dashboard"))
+    submission = QuizSubmission.query.get_or_404(submission_id)
+    if request.method == 'POST':
+        try:
+            score = int(request.form['score'])
+        except ValueError:
+            flash("Invalid score.", "danger")
+            return redirect(url_for('admin_mark_quiz', submission_id=submission_id))
+        submission.score = score
+        submission.marked = True
+        db.session.commit()
+        # Notify user (see below)
+        user = submission.user
+        flash(f"Marked and user {user.email} will be notified.", "success")
+        return redirect(url_for('admin_mark_quizzes'))
+    return render_template('admin_mark_quiz.html', submission=submission)
+
+@app.route('/existing_quizzes')
+@login_required
+def existing_quizzes():
+    if not hasattr(current_user, 'is_admin') or not current_user.is_admin:
+        return redirect(url_for('dashboard'))
+    quizzes = Quiz.query.all()
+    return render_template('existing_quizzes.html', quizzes=quizzes)
 
 if __name__ == "__main__":
     """

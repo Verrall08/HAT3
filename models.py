@@ -7,6 +7,9 @@ from flask_login import UserMixin
 # Import Werkzeug functions for password hashing (secure storage)
 from werkzeug.security import generate_password_hash, check_password_hash
 
+# Import datetime for timestamping submissions
+from datetime import datetime
+
 # Create a SQLAlchemy database instance
 db = SQLAlchemy()
 
@@ -54,3 +57,16 @@ class Question(db.Model):
     option_d = db.Column(db.String(100))
     correct_option = db.Column(db.String(1))
     points = db.Column(db.Integer, default=1)
+
+
+class QuizSubmission(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    quiz_id = db.Column(db.Integer, db.ForeignKey('quiz.id'), nullable=False)
+    answers = db.Column(db.PickleType, nullable=False)  # Stores answers as a dict
+    score = db.Column(db.Integer)
+    marked = db.Column(db.Boolean, default=False)
+    submitted_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship('User', backref='submissions')
+    quiz = db.relationship('Quiz', backref='submissions')
