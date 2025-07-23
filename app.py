@@ -93,31 +93,12 @@ def logout():
     logout_user()
     return redirect(url_for("login"))
 
-@app.route('/quiz', methods=['GET', 'POST'])
+@app.route('/quiz')
 @login_required
 def quiz():
     quizzes = Quiz.query.all()
-    if request.method == 'POST':
-        score = 0
-        total = 0
-        quiz_id = request.form.get('quiz_id')
-        if not quiz_id:
-            flash('Quiz ID is missing.', 'danger')
-            return redirect(url_for('quiz'))
-        try:
-            quiz_id = int(quiz_id)
-        except ValueError:
-            flash('Invalid Quiz ID.', 'danger')
-            return redirect(url_for('quiz'))
-        questions = Question.query.filter_by(quiz_id=quiz_id).all()
-        for q in questions:
-            total += 1
-            user_answer = request.form.get(f'question_{q.id}')
-            if user_answer == q.correct_option:
-                score += 1
-        flash(f'You scored {score} out of {total}', 'success')
-        return redirect(url_for('quiz'))
-    return render_template('quiz.html', quizzes=quizzes)
+    submitted_ids = {sub.quiz_id for sub in QuizSubmission.query.filter_by(user_id=current_user.id).all()}
+    return render_template('quiz.html', quizzes=quizzes, submitted_ids=submitted_ids)
 
 @app.route('/manage_quiz', methods=['GET', 'POST'])
 @login_required
@@ -183,16 +164,11 @@ def manage_quiz():
 def delete_quiz(quiz_id):
     Quiz.query.filter_by(id=quiz_id).delete()
     db.session.commit()
-    return redirect(url_for('manage_quiz'))
+    return redirect(url_for('dashboard'))
 
 @app.route("/dashboard")
 @login_required
 def dashboard():
-    # Check for marked submissions
-    marked_submissions = QuizSubmission.query.filter_by(user_id=current_user.id, marked=True).all()
-    for sub in marked_submissions:
-        if sub.score is not None:
-            flash(f"Your quiz '{sub.quiz.title}' has been marked. Score: {sub.score}", "info")
     return render_template("dashboard.html")
 
 
@@ -237,18 +213,13 @@ def users():
 @login_required
 def submit_quiz_for_review():
     quiz_id = request.form.get('quiz_id')
-    if not quiz_id:
-        flash('Quiz ID missing.', 'danger')
+    existing = QuizSubmission.query.filter_by(user_id=current_user.id, quiz_id=quiz_id).first()
+    if existing:
+        flash("You have already submitted this quiz.", "info")
         return redirect(url_for('quiz'))
-    try:
-        quiz_id = int(quiz_id)
-    except ValueError:
-        flash('Invalid Quiz ID.', 'danger')
-        return redirect(url_for('quiz'))
+    # Save submission
     questions = Question.query.filter_by(quiz_id=quiz_id).all()
-    answers = {}
-    for q in questions:
-        answers[str(q.id)] = request.form.get(f'question_{q.id}', '')
+    answers = {str(q.id): request.form.get(f'question_{q.id}', '') for q in questions}
     submission = QuizSubmission(
         user_id=current_user.id,
         quiz_id=quiz_id,
@@ -256,7 +227,17 @@ def submit_quiz_for_review():
     )
     db.session.add(submission)
     db.session.commit()
-    flash("Your quiz has been submitted for review. You will be notified once it is marked.")
+
+    # Check if all users have completed this quiz
+    all_user_ids = [user.id for user in User.query.all()]
+    submitted_user_ids = [sub.user_id for sub in QuizSubmission.query.filter_by(quiz_id=quiz_id).all()]
+    if set(all_user_ids) == set(submitted_user_ids):
+        # All users have completed the quiz, delete it
+        Quiz.query.filter_by(id=quiz_id).delete()
+        db.session.commit()
+        flash("All users have completed this quiz. The quiz has been removed.", "info")
+    else:
+        flash("Your quiz has been submitted for review. You will be notified once it is marked.", "success")
     return redirect(url_for('quiz'))
 
 @app.route('/admin/mark_quizzes')
@@ -272,17 +253,19 @@ def admin_mark_quiz(submission_id):
         return redirect(url_for("dashboard"))
     submission = QuizSubmission.query.get_or_404(submission_id)
     if request.method == 'POST':
-        try:
-            score = int(request.form['score'])
-        except ValueError:
-            flash("Invalid score.", "danger")
-            return redirect(url_for('admin_mark_quiz', submission_id=submission_id))
-        submission.score = score
+        total_score = 0
+        for question in submission.quiz.questions:
+            score_str = request.form.get(f'score_{question.id}', '0')
+            try:
+                score = int(score_str)
+            except ValueError:
+                score = 0
+            score = max(0, min(score, question.points))
+            total_score += score
+        submission.score = total_score
         submission.marked = True
         db.session.commit()
-        # Notify user (see below)
-        user = submission.user
-        flash(f"Marked and user {user.email} will be notified.", "success")
+        flash(f"Quiz marked. Total score: {total_score}", "success")
         return redirect(url_for('admin_mark_quizzes'))
     return render_template('admin_mark_quiz.html', submission=submission)
 
@@ -293,6 +276,13 @@ def existing_quizzes():
         return redirect(url_for('dashboard'))
     quizzes = Quiz.query.all()
     return render_template('existing_quizzes.html', quizzes=quizzes)
+
+@app.route("/my_scores")
+@login_required
+def my_scores():
+    # Get all marked submissions for the current user
+    marked_submissions = QuizSubmission.query.filter_by(user_id=current_user.id, marked=True).all()
+    return render_template("my_scores.html", submissions=marked_submissions)
 
 if __name__ == "__main__":
     """

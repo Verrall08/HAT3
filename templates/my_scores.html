@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}My Quiz Scores{% endblock %}
+{% block content %}
+<h2>My Quiz Scores</h2>
+{% if submissions %}
+  <ul>
+    {% for sub in submissions %}
+      {% if sub.quiz %}
+        <li>
+          <strong>{{ sub.quiz.title }}</strong>:
+          {% if sub.score is not none %}
+            {{ sub.score }} points
+          {% else %}
+            Not marked yet
+          {% endif %}
+        </li>
+      {% endif %}
+    {% endfor %}
+  </ul>
+{% else %}
+  <div class="alert alert-info">You have no marked quizzes yet.</div>
+{% endif %}
+{% endblock %}

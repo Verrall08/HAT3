@@ -4,14 +4,16 @@
 <h2>Mark Quiz: {{ submission.quiz.title }}</h2>
 <form method="POST">
   {% for question in submission.quiz.questions %}
-    <div class="mb-3">
-      <label>{{ question.text }}</label><br>
-      <strong>User Answer:</strong> {{ submission.answers[question.id] }}<br>
+    <div class="mb-3 border p-2 rounded">
+      <label><strong>Question:</strong> {{ question.text }}</label><br>
+      <strong>User Answer:</strong>
+      {{ submission.answers[question.id|string] if submission.answers[question.id|string] is defined else 'No answer provided' }}<br>
       <strong>Correct Answer:</strong> {{ question.correct_option }}<br>
+      <strong>Points Available:</strong> {{ question.points }}<br>
+      <label for="score_{{ question.id }}">Mark (0 - {{ question.points }}):</label>
+      <input type="number" class="form-control w-auto d-inline" name="score_{{ question.id }}" min="0" max="{{ question.points }}" required>
     </div>
   {% endfor %}
-  <label for="score">Score</label>
-  <input type="number" name="score" min="0" max="{{ submission.quiz.max_score }}" required>
-  <button type="submit" class="btn btn-success">Submit Score</button>
+  <button type="submit" class="btn btn-success">Submit Marks</button>
 </form>
 {% endblock %}
