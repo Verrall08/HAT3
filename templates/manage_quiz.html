@@ -12,6 +12,15 @@
     <input type="number" class="form-control" id="num_questions" name="num_questions" min="1" max="20" value="3" required>
   </div>
   <div id="questions-container"></div>
+  <div class="mb-3">
+    <label for="assigned_users" class="form-label">Assign to Users</label>
+    <select multiple class="form-select" id="assigned_users" name="assigned_users">
+      {% for user in users %}
+        <option value="{{ user.id }}">{{ user.email }}</option>
+      {% endfor %}
+    </select>
+    <small class="form-text text-muted">Hold Ctrl (Cmd on Mac) to select multiple users.</small>
+  </div>
   <button type="submit" class="btn btn-success mt-3">Create Quiz</button>
 </form>
 

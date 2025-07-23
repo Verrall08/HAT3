@@ -96,18 +96,24 @@ def logout():
 @app.route('/quiz')
 @login_required
 def quiz():
-    quizzes = Quiz.query.all()
-    submitted_ids = {sub.quiz_id for sub in QuizSubmission.query.filter_by(user_id=current_user.id).all()}
-    return render_template('quiz.html', quizzes=quizzes, submitted_ids=submitted_ids)
+    # Only quizzes assigned to the current user
+    quizzes = Quiz.query.filter(Quiz.assigned_users.any(id=current_user.id)).all()
+    submitted_ids = set(
+        str(sub.quiz_id) for sub in QuizSubmission.query.filter_by(user_id=current_user.id).all()
+    )
+    quizzes_to_show = [quiz for quiz in quizzes if str(quiz.id) not in submitted_ids]
+    return render_template('quiz.html', quizzes=quizzes_to_show, submitted_ids=submitted_ids)
 
 @app.route('/manage_quiz', methods=['GET', 'POST'])
 @login_required
 def manage_quiz():
     if not hasattr(current_user, 'is_admin') or not current_user.is_admin:
         return redirect(url_for('dashboard'))
+    users = User.query.all()
     if request.method == 'POST':
         title = request.form.get('title', '').strip()
         num_questions_str = request.form.get('num_questions', '1')
+        assigned_user_ids = request.form.getlist('assigned_users')
         try:
             num_questions = int(num_questions_str)
         except ValueError:
@@ -118,6 +124,11 @@ def manage_quiz():
         quiz = Quiz(title=title)
         db.session.add(quiz)
         db.session.commit()
+        # Assign users
+        for user_id in assigned_user_ids:
+            user = User.query.get(int(user_id))
+            if user:
+                quiz.assigned_users.append(user)
         for i in range(1, num_questions + 1):
             q_text = request.form.get(f'question_{i}', '').strip()
             q_type = request.form.get(f'type_{i}', 'multiple')
@@ -155,10 +166,10 @@ def manage_quiz():
                     )
                     db.session.add(question)
         db.session.commit()
-        flash('Quiz created and sent to users!', 'success')
+        flash('Quiz created and sent to selected users!', 'success')
         return redirect(url_for('manage_quiz'))
     quizzes = Quiz.query.all()
-    return render_template('manage_quiz.html', quizzes=quizzes)
+    return render_template('manage_quiz.html', quizzes=quizzes, users=users)
 
 @app.route('/delete_quiz/<int:quiz_id>', methods=['POST'])
 def delete_quiz(quiz_id):
@@ -228,14 +239,15 @@ def submit_quiz_for_review():
     db.session.add(submission)
     db.session.commit()
 
-    # Check if all users have completed this quiz
-    all_user_ids = [user.id for user in User.query.all()]
+    # Check if all assigned users have completed this quiz
+    quiz = Quiz.query.get(quiz_id)
+    assigned_user_ids = [user.id for user in quiz.assigned_users]
     submitted_user_ids = [sub.user_id for sub in QuizSubmission.query.filter_by(quiz_id=quiz_id).all()]
-    if set(all_user_ids) == set(submitted_user_ids):
-        # All users have completed the quiz, delete it
+    if set(assigned_user_ids) == set(submitted_user_ids):
+        # All assigned users have completed the quiz, delete it
         Quiz.query.filter_by(id=quiz_id).delete()
         db.session.commit()
-        flash("All users have completed this quiz. The quiz has been removed.", "info")
+        flash("All assigned users have completed this quiz. The quiz has been removed.", "info")
     else:
         flash("Your quiz has been submitted for review. You will be notified once it is marked.", "success")
     return redirect(url_for('quiz'))
