@@ -18,10 +18,10 @@ from sqlalchemy import Table, Column, Integer, ForeignKey
 from sqlalchemy.orm import relationship
 
 # Association table for the many-to-many relationship between quizzes and users
-quiz_assignments = Table(
-    'quiz_assignments', db.Model.metadata,
-    Column('quiz_id', Integer, ForeignKey('quiz.id')),
-    Column('user_id', Integer, ForeignKey('user.id'))
+quiz_assignments = db.Table(
+    'quiz_assignments',
+    db.Column('quiz_id', db.Integer, db.ForeignKey('quiz.id')),
+    db.Column('user_id', db.Integer, db.ForeignKey('user.id'))
 )
 
 
@@ -55,7 +55,7 @@ class Quiz(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(100), nullable=False)
     questions = db.relationship('Question', backref='quiz', lazy=True)
-    assigned_users = relationship('User', secondary=quiz_assignments, backref='assigned_quizzes')
+    assigned_users = db.relationship('User', secondary=quiz_assignments, backref='assigned_quizzes')
 
 
 class Question(db.Model):

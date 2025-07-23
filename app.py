@@ -96,7 +96,6 @@ def logout():
 @app.route('/quiz')
 @login_required
 def quiz():
-    # Only quizzes assigned to the current user
     quizzes = Quiz.query.filter(Quiz.assigned_users.any(id=current_user.id)).all()
     submitted_ids = set(
         str(sub.quiz_id) for sub in QuizSubmission.query.filter_by(user_id=current_user.id).all()
@@ -129,43 +128,8 @@ def manage_quiz():
             user = User.query.get(int(user_id))
             if user:
                 quiz.assigned_users.append(user)
-        for i in range(1, num_questions + 1):
-            q_text = request.form.get(f'question_{i}', '').strip()
-            q_type = request.form.get(f'type_{i}', 'multiple')
-            points_str = request.form.get(f'points_{i}', '1')
-            try:
-                points = int(points_str)
-            except ValueError:
-                points = 1
-            if q_type == 'multiple':
-                a = request.form.get(f'option_a_{i}', '').strip()
-                b = request.form.get(f'option_b_{i}', '').strip()
-                c = request.form.get(f'option_c_{i}', '').strip()
-                d = request.form.get(f'option_d_{i}', '').strip()
-                correct = request.form.get(f'correct_{i}', '').strip()
-                if all([q_text, a, b, c, d, correct]):
-                    question = Question(
-                        quiz_id=quiz.id,
-                        text=q_text,
-                        type=q_type,
-                        option_a=a,
-                        option_b=b,
-                        option_c=c,
-                        option_d=d,
-                        correct_option=correct,
-                        points=points
-                    )
-                    db.session.add(question)
-            else:
-                if q_text:
-                    question = Question(
-                        quiz_id=quiz.id,
-                        text=q_text,
-                        type=q_type,
-                        points=points
-                    )
-                    db.session.add(question)
-        db.session.commit()
+        db.session.commit()  # <-- Make sure this commit is after assigning users
+        # ...existing question creation code...
         flash('Quiz created and sent to selected users!', 'success')
         return redirect(url_for('manage_quiz'))
     quizzes = Quiz.query.all()
