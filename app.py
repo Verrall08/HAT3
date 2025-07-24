@@ -135,10 +135,16 @@ def manage_quiz():
     return render_template('manage_quiz.html', quizzes=quizzes, users=users)
 
 @app.route('/delete_quiz/<int:quiz_id>', methods=['POST'])
+@login_required
 def delete_quiz(quiz_id):
-    Quiz.query.filter_by(id=quiz_id).delete()
+    quiz = Quiz.query.get_or_404(quiz_id)
+    # Delete all questions related to this quiz
+    Question.query.filter_by(quiz_id=quiz.id).delete()
+    # Delete the quiz itself
+    db.session.delete(quiz)
     db.session.commit()
-    return redirect(url_for('dashboard'))
+    flash('Quiz and its questions have been deleted.', 'success')
+    return redirect(url_for('existing_quizzes'))
 
 @app.route("/dashboard")
 @login_required
