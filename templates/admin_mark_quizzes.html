@@ -1,13 +1,39 @@
 {% extends "base.html" %}
-{% block title %}Mark Quizzes{% endblock %}
+{% block title %}Quizzes to Mark{% endblock %}
 {% block content %}
-<h2>Quizzes to Mark</h2>
-<ul>
-  {% for submission in submissions %}
-    <li>
-      {{ submission.user.username }} - {{ submission.quiz.title }}
-      <a href="{{ url_for('admin_mark_quiz', submission_id=submission.id) }}">Mark</a>
-    </li>
-  {% endfor %}
-</ul>
+<h2 class="mb-4">Quizzes to Mark</h2>
+{% if submissions %}
+  <table class="table table-bordered table-striped">
+    <thead>
+      <tr>
+        <th>User</th>
+        <th>Quiz Title</th>
+        <th>Questions</th>
+        <th>Submitted At</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for submission in submissions %}
+        <tr>
+          <td>{{ submission.user.username if submission.user.username else submission.user.email }}</td>
+          <td>{{ submission.quiz.title }}</td>
+          <td>{{ submission.quiz.questions|length }}</td>
+          <td>
+            {% if submission.submitted_at %}
+              {{ submission.submitted_at.strftime('%Y-%m-%d %H:%M') }}
+            {% else %}
+              N/A
+            {% endif %}
+          </td>
+          <td>
+            <a href="{{ url_for('admin_mark_quiz', submission_id=submission.id) }}" class="btn btn-primary btn-sm">Mark</a>
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% else %}
+  <div class="alert alert-info">No quizzes to mark at the moment.</div>
+{% endif %}
 {% endblock %}

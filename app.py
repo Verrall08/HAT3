@@ -1,5 +1,5 @@
 # Import Flask and related modules
-from flask import Flask, render_template, redirect, url_for, flash, request
+from flask import Flask, render_template, redirect, url_for, flash, request, abort
 from flask_login import (
     LoginManager,
     login_user,
@@ -14,6 +14,9 @@ from forms import RegisterForm, LoginForm, EditAccountForm
 from config import Config   
 from seed_db import seed_default_users
 from models import Quiz, Question, QuizSubmission
+import json
+from sqlalchemy.orm import joinedload
+
 
 # Create the Flask app instance
 app = Flask(__name__)
@@ -128,7 +131,39 @@ def manage_quiz():
             if user:
                 quiz.assigned_users.append(user)
         db.session.commit()  # Commit after assigning users
-        # ...existing question creation code...
+
+        # Add questions to the quiz
+        for i in range(1, num_questions + 1):
+            q_text = request.form.get(f'question_{i}', '').strip()
+            q_type = request.form.get(f'type_{i}', 'multiple')
+            points = int(request.form.get(f'points_{i}', '1'))
+            if q_type == 'multiple':
+                option_a = request.form.get(f'option_a_{i}', '')
+                option_b = request.form.get(f'option_b_{i}', '')
+                option_c = request.form.get(f'option_c_{i}', '')
+                option_d = request.form.get(f'option_d_{i}', '')
+                correct_option = request.form.get(f'correct_{i}', '')
+                question = Question(
+                    quiz_id=quiz.id,
+                    text=q_text,
+                    type=q_type,
+                    option_a=option_a,
+                    option_b=option_b,
+                    option_c=option_c,
+                    option_d=option_d,
+                    correct_option=correct_option,
+                    points=points
+                )
+            else:  # short answer
+                question = Question(
+                    quiz_id=quiz.id,
+                    text=q_text,
+                    type=q_type,
+                    points=points
+                )
+            db.session.add(question)
+        db.session.commit()  # Save all questions
+
         flash('Quiz created and sent to selected users!', 'success')
         return redirect(url_for('manage_quiz'))
     quizzes = Quiz.query.all()
@@ -137,7 +172,9 @@ def manage_quiz():
 @app.route('/delete_quiz/<int:quiz_id>', methods=['POST'])
 @login_required
 def delete_quiz(quiz_id):
-    quiz = Quiz.query.get_or_404(quiz_id)
+    quiz = db.session.get(Quiz, quiz_id)
+    if quiz is None:
+        abort(404)
     # Delete all questions related to this quiz
     Question.query.filter_by(quiz_id=quiz.id).delete()
     # Delete the quiz itself
@@ -203,7 +240,7 @@ def submit_quiz_for_review():
     submission = QuizSubmission(
         user_id=current_user.id,
         quiz_id=quiz_id,
-        answers=answers
+        answers=answers  # This should be a dict with string keys
     )
     db.session.add(submission)
     db.session.commit()
@@ -228,7 +265,20 @@ def admin_mark_quiz(submission_id):
     if not current_user.is_admin:
         flash("Access denied.", "danger")
         return redirect(url_for("dashboard"))
-    submission = QuizSubmission.query.get_or_404(submission_id)
+    submission = (
+        QuizSubmission.query
+        .options(joinedload(QuizSubmission.quiz).joinedload(Quiz.questions))
+        .get_or_404(submission_id)
+    )
+    # Ensure answers is a dict with string keys
+    if isinstance(submission.answers, str):
+        try:
+            submission.answers = json.loads(submission.answers)
+        except Exception:
+            submission.answers = {}
+    elif isinstance(submission.answers, dict):
+        # Convert keys to string if needed
+        submission.answers = {str(k): v for k, v in submission.answers.items()}
     if request.method == 'POST':
         total_score = 0
         for question in submission.quiz.questions:

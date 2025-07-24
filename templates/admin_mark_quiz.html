@@ -2,13 +2,22 @@
 {% block title %}Mark Quiz{% endblock %}
 {% block content %}
 <h2>Mark Quiz: {{ submission.quiz.title }}</h2>
+<p><strong>User:</strong> {{ submission.user.email }}</p>
+<p><strong>Questions count:</strong> {{ submission.quiz.questions|length }}</p>
 <form method="POST">
   {% for question in submission.quiz.questions %}
     <div class="mb-3 border p-2 rounded">
       <label><strong>Question:</strong> {{ question.text }}</label><br>
       <strong>User Answer:</strong>
-      {{ submission.answers[question.id|string] if submission.answers[question.id|string] is defined else 'No answer provided' }}<br>
-      <strong>Correct Answer:</strong> {{ question.correct_option }}<br>
+      {{ submission.answers.get(question.id|string, 'No answer provided') }}<br>
+      {% if question.type == 'multiple' %}
+        <strong>Correct Option:</strong> {{ question.correct_option|upper }}<br>
+        <strong>Options:</strong>
+        A: {{ question.option_a }},
+        B: {{ question.option_b }},
+        C: {{ question.option_c }},
+        D: {{ question.option_d }}<br>
+      {% endif %}
       <strong>Points Available:</strong> {{ question.points }}<br>
       <label for="score_{{ question.id }}">Mark (0 - {{ question.points }}):</label>
       <input type="number" class="form-control w-auto d-inline" name="score_{{ question.id }}" min="0" max="{{ question.points }}" required>

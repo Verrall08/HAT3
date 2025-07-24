@@ -54,7 +54,7 @@ class User(UserMixin, db.Model):
 class Quiz(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(100), nullable=False)
-    questions = db.relationship('Question', backref='quiz', lazy=True)
+    questions = db.relationship('Question', backref='quiz', lazy='joined')
     assigned_users = db.relationship('User', secondary=quiz_assignments, backref='assigned_quizzes')
 
 
