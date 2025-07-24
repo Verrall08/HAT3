@@ -123,12 +123,11 @@ def manage_quiz():
         quiz = Quiz(title=title)
         db.session.add(quiz)
         db.session.commit()
-        # Assign users
         for user_id in assigned_user_ids:
             user = User.query.get(int(user_id))
             if user:
                 quiz.assigned_users.append(user)
-        db.session.commit()  # <-- Make sure this commit is after assigning users
+        db.session.commit()  # Commit after assigning users
         # ...existing question creation code...
         flash('Quiz created and sent to selected users!', 'success')
         return redirect(url_for('manage_quiz'))
@@ -208,12 +207,8 @@ def submit_quiz_for_review():
     assigned_user_ids = [user.id for user in quiz.assigned_users]
     submitted_user_ids = [sub.user_id for sub in QuizSubmission.query.filter_by(quiz_id=quiz_id).all()]
     if set(assigned_user_ids) == set(submitted_user_ids):
-        # All assigned users have completed the quiz, delete it
         Quiz.query.filter_by(id=quiz_id).delete()
         db.session.commit()
-        flash("All assigned users have completed this quiz. The quiz has been removed.", "info")
-    else:
-        flash("Your quiz has been submitted for review. You will be notified once it is marked.", "success")
     return redirect(url_for('quiz'))
 
 @app.route('/admin/mark_quizzes')
