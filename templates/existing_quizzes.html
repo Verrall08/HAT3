@@ -2,7 +2,6 @@
 {% block title %}Existing Quizzes{% endblock %}
 {% block content %}
 <h2>Existing Quizzes</h2>
-<ul>
   {% if quizzes %}
     {% for quiz in quizzes %}
       <li>
@@ -27,9 +26,8 @@
           {% endif %}
         </form>
       </li>
-    {% endfor %}
+  {% endfor %}
   {% else %}
-    <li>No quizzes available.</li>
+    <div class="alert alert-info">No existing quizzes at the moment.</div>
   {% endif %}
-</ul>
 {% endblock %}
