@@ -7,15 +7,15 @@
 <form method="POST">
   {% for question in submission.quiz.questions %}
     <div class="mb-3 border p-2 rounded">
-      <label><strong>Question:</strong> {{ question.text }}</label><br>
+      <label><strong>Question {{ loop.index }}:</strong> {{ question.text }}</label><br>
       <strong>User Answer:</strong>
-      {{ submission.answers.get(question.id|string, 'No answer provided') }}<br>
+      {{ submission.parsed_answers.get(question.id|string, 'No answer provided') }}<br>
       {% if question.type == 'multiple' %}
         <strong>Correct Option:</strong> {{ question.correct_option|upper }}<br>
-        <strong>Options:</strong>
-        A: {{ question.option_a }},
-        B: {{ question.option_b }},
-        C: {{ question.option_c }},
+        <strong>Options:</strong><br>
+        A: {{ question.option_a }}<br>
+        B: {{ question.option_b }}<br>
+        C: {{ question.option_c }}<br>
         D: {{ question.option_d }}<br>
       {% endif %}
       <strong>Points Available:</strong> {{ question.points }}<br>

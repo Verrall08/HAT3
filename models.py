@@ -16,12 +16,12 @@ db = SQLAlchemy()
 # Import Table, Column, Integer, ForeignKey for many-to-many relationship
 from sqlalchemy import Table, Column, Integer, ForeignKey
 from sqlalchemy.orm import relationship
+import json
 
 # Association table for the many-to-many relationship between quizzes and users
-quiz_assignments = db.Table(
-    'quiz_assignments',
-    db.Column('quiz_id', db.Integer, db.ForeignKey('quiz.id')),
-    db.Column('user_id', db.Integer, db.ForeignKey('user.id'))
+QuizAssignments = db.Table('QuizAssignments',
+    db.Column('quiz_id', db.Integer, db.ForeignKey('quiz.id'), primary_key=True),
+    db.Column('user_id', db.Integer, db.ForeignKey('user.id'), primary_key=True)
 )
 
 
@@ -55,7 +55,7 @@ class Quiz(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(100), nullable=False)
     questions = db.relationship('Question', backref='quiz', lazy='joined')
-    assigned_users = db.relationship('User', secondary=quiz_assignments, backref='assigned_quizzes')
+    assigned_users = db.relationship('User', secondary=QuizAssignments, backref='assigned_quizzes')
 
 
 class Question(db.Model):
@@ -71,6 +71,7 @@ class Question(db.Model):
     points = db.Column(db.Integer, default=1)
 
 
+
 class QuizSubmission(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
@@ -79,6 +80,17 @@ class QuizSubmission(db.Model):
     score = db.Column(db.Integer)
     marked = db.Column(db.Boolean, default=False)
     submitted_at = db.Column(db.DateTime, default=datetime.utcnow)
+    viewed = db.Column(db.Boolean, default=False)
 
     user = db.relationship('User', backref='submissions')
     quiz = db.relationship('Quiz', backref='submissions')
+
+    @property
+    def parsed_answers(self):
+        """Return answers as a dictionary, handling JSON conversion if needed."""
+        if isinstance(self.answers, str):
+            try:
+                return json.loads(self.answers)
+            except:
+                return {}
+        return self.answers or {}

@@ -1,5 +1,5 @@
 # Import Flask and related modules
-from flask import Flask, render_template, redirect, url_for, flash, request, abort
+from flask import Flask, render_template, redirect, url_for, flash, request, abort, current_app
 from flask_login import (
     LoginManager,
     login_user,
@@ -13,10 +13,9 @@ from models import db, User
 from forms import RegisterForm, LoginForm, EditAccountForm
 from config import Config   
 from seed_db import seed_default_users
-from models import Quiz, Question, QuizSubmission
+from models import Quiz, Question, QuizSubmission, QuizAssignments
 import json
 from sqlalchemy.orm import joinedload
-
 
 # Create the Flask app instance
 app = Flask(__name__)
@@ -101,7 +100,7 @@ def logout():
 def quiz():
     quizzes = Quiz.query.filter(Quiz.assigned_users.any(id=current_user.id)).all()
     submitted_ids = set(
-        str(sub.quiz_id) for sub in QuizSubmission.query.filter_by(user_id=current_user.id).all()
+        str(sub.quiz_id) for sub in QuizSubmission.query.filter_by(id=current_user.id).all()
     )
     quizzes_to_show = [quiz for quiz in quizzes if str(quiz.id) not in submitted_ids]
     return render_template('quiz.html', quizzes=quizzes_to_show, submitted_ids=submitted_ids)
@@ -177,8 +176,9 @@ def delete_quiz(quiz_id):
         abort(404)
     # Delete all questions related to this quiz
     Question.query.filter_by(quiz_id=quiz.id).delete()
-    # Delete the quiz itself
-    db.session.delete(quiz)
+    Quiz.query.filter_by(id=quiz.id).delete()
+    QuizSubmission.query.filter_by(quiz_id=quiz.id).delete()
+    # how to delete the quiz assignments?
     db.session.commit()
     flash('Quiz and its questions have been deleted.', 'success')
     return redirect(url_for('existing_quizzes'))
@@ -234,29 +234,28 @@ def submit_quiz_for_review():
     if existing:
         flash("You have already submitted this quiz.", "info")
         return redirect(url_for('quiz'))
+        
     # Save submission
     questions = Question.query.filter_by(quiz_id=quiz_id).all()
     answers = {str(q.id): request.form.get(f'question_{q.id}', '') for q in questions}
     submission = QuizSubmission(
         user_id=current_user.id,
         quiz_id=quiz_id,
-        answers=answers  # This should be a dict with string keys
+        answers=answers
     )
     db.session.add(submission)
     db.session.commit()
 
-    # Check if all assigned users have completed this quiz
-    quiz = Quiz.query.get(quiz_id)
-    assigned_user_ids = [user.id for user in quiz.assigned_users]
-    submitted_user_ids = [sub.user_id for sub in QuizSubmission.query.filter_by(quiz_id=quiz_id).all()]
-    if set(assigned_user_ids) == set(submitted_user_ids):
-        Quiz.query.filter_by(id=quiz_id).delete()
-        db.session.commit()
+    flash("Quiz submitted successfully for review!", "success")
     return redirect(url_for('quiz'))
 
 @app.route('/admin/mark_quizzes')
 def admin_mark_quizzes():
     submissions = QuizSubmission.query.filter_by(marked=False).all()
+    #checck if submission is empty
+    if submissions is None:
+        flash("No quizzes to mark.", "info")
+        return redirect(url_for('dashboard'))
     return render_template('admin_mark_quizzes.html', submissions=submissions)
 
 @app.route('/admin/mark_quiz/<int:submission_id>', methods=['GET', 'POST'])
@@ -265,20 +264,20 @@ def admin_mark_quiz(submission_id):
     if not current_user.is_admin:
         flash("Access denied.", "danger")
         return redirect(url_for("dashboard"))
+    
+    # Clear any stale data
+    db.session.expire_all()
+    
+    # Load submission with all relationships
     submission = (
         QuizSubmission.query
-        .options(joinedload(QuizSubmission.quiz).joinedload(Quiz.questions))
+        .options(
+            joinedload(QuizSubmission.quiz),
+            joinedload(QuizSubmission.user)
+        )
         .get_or_404(submission_id)
     )
-    # Ensure answers is a dict with string keys
-    if isinstance(submission.answers, str):
-        try:
-            submission.answers = json.loads(submission.answers)
-        except Exception:
-            submission.answers = {}
-    elif isinstance(submission.answers, dict):
-        # Convert keys to string if needed
-        submission.answers = {str(k): v for k, v in submission.answers.items()}
+    
     if request.method == 'POST':
         total_score = 0
         for question in submission.quiz.questions:
@@ -289,11 +288,26 @@ def admin_mark_quiz(submission_id):
                 score = 0
             score = max(0, min(score, question.points))
             total_score += score
+        
+        # Update submission with score and mark as complete
         submission.score = total_score
         submission.marked = True
         db.session.commit()
-        flash(f"Quiz marked. Total score: {total_score}", "success")
+        
+        flash(f"Quiz marked successfully. Total score: {total_score}", "success")
         return redirect(url_for('admin_mark_quizzes'))
+    
+    # Load questions separately to ensure they're fresh
+    quiz = Quiz.query.options(joinedload(Quiz.questions)).get(submission.quiz_id)
+    submission.quiz = quiz
+    
+    # Handle answers
+    if isinstance(submission.answers, str):
+        try:
+            submission.answers = json.loads(submission.answers)
+        except Exception:
+            submission.answers = {}
+    
     return render_template('admin_mark_quiz.html', submission=submission)
 
 @app.route('/existing_quizzes')
@@ -308,7 +322,37 @@ def existing_quizzes():
 @login_required
 def my_scores():
     # Get all marked submissions for the current user
-    marked_submissions = QuizSubmission.query.filter_by(user_id=current_user.id, marked=True).all()
+    marked_submissions = QuizSubmission.query.filter_by(
+        user_id=current_user.id, 
+        marked=True
+    ).all()
+
+    quizzes_to_delete = set()
+    
+    for submission in marked_submissions:
+        quiz = submission.quiz
+        if quiz:
+            assigned_user_ids = [user.id for user in quiz.assigned_users]
+            all_submissions = QuizSubmission.query.filter(
+                QuizSubmission.quiz_id == quiz.id,
+                QuizSubmission.user_id.in_(assigned_user_ids)
+            ).all()
+            # If all assigned users have a marked submission, delete the quiz
+            if all(sub.marked for sub in all_submissions) and len(all_submissions) == len(assigned_user_ids):
+                # quizzes_to_delete.add(quiz.id)
+            
+                db.session.commit()
+    
+    # Delete quizzes that all assigned users have marked submissions
+    for quiz_id in quizzes_to_delete:
+        db.session.execute(
+            QuizAssignments.delete().where(QuizAssignments.c.quiz_id == quiz_id)
+        )
+        Question.query.filter_by(quiz_id=quiz_id).delete()
+        QuizSubmission.query.filter_by(quiz_id=quiz_id).delete()
+        Quiz.query.filter_by(id=quiz_id).delete()
+    db.session.commit()
+    
     return render_template("my_scores.html", submissions=marked_submissions)
 
 if __name__ == "__main__":

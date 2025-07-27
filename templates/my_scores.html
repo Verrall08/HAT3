@@ -5,7 +5,7 @@
 {% if submissions %}
   <ul>
     {% for sub in submissions %}
-      {% if sub.quiz and (sub.quiz.id|string in submitted_ids) %}
+      {% if sub.quiz %}
         <li>
           <strong>{{ sub.quiz.title }}</strong>:
           {% if sub.score is not none %}
