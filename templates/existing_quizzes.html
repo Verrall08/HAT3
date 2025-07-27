@@ -19,9 +19,17 @@
         <form method="POST" action="{{ url_for('delete_quiz', quiz_id=quiz.id) }}" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this quiz?');">
           <button type="submit" class="btn btn-danger btn-sm">Delete</button>
         </form>
+        <form method="POST" action="{{ url_for('toggle_quiz_visibility', quiz_id=quiz.id) }}" style="display:inline;">
+          {% if quiz.deleted %}
+            <button type="submit" class="btn btn-success btn-sm">Show</button>
+          {% else %}
+            <button type="submit" class="btn btn-warning btn-sm">Hide</button>
+          {% endif %}
+        </form>
       </li>
-  </ul>
-  {% endfor %}
+    {% endfor %}
   {% else %}
+    <li>No quizzes available.</li>
   {% endif %}
-  {% endblock %}
+</ul>
+{% endblock %}

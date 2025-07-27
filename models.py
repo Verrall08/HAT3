@@ -21,8 +21,9 @@ import json
 # Association table for the many-to-many relationship between quizzes and users
 QuizAssignments = db.Table('QuizAssignments',
     db.Column('quiz_id', db.Integer, db.ForeignKey('quiz.id'), primary_key=True),
-    db.Column('user_id', db.Integer, db.ForeignKey('user.id'), primary_key=True)
-)
+    db.Column('user_id', db.Integer, db.ForeignKey('user.id'), primary_key=True),
+    db.Column('hidden', db.Boolean, default=False)
+)   
 
 
 class User(UserMixin, db.Model):
@@ -56,6 +57,7 @@ class Quiz(db.Model):
     title = db.Column(db.String(100), nullable=False)
     questions = db.relationship('Question', backref='quiz', lazy='joined')
     assigned_users = db.relationship('User', secondary=QuizAssignments, backref='assigned_quizzes')
+    hidden = db.Column(db.Boolean, default=False)
 
 
 class Question(db.Model):
@@ -69,6 +71,8 @@ class Question(db.Model):
     option_d = db.Column(db.String(100))
     correct_option = db.Column(db.String(1))
     points = db.Column(db.Integer, default=1)
+    hidden = db.Column(db.Boolean, default=False)
+
 
 
 
@@ -81,6 +85,8 @@ class QuizSubmission(db.Model):
     marked = db.Column(db.Boolean, default=False)
     submitted_at = db.Column(db.DateTime, default=datetime.utcnow)
     viewed = db.Column(db.Boolean, default=False)
+    hidden = db.Column(db.Boolean, default=False)
+
 
     user = db.relationship('User', backref='submissions')
     quiz = db.relationship('Quiz', backref='submissions')

@@ -14,7 +14,7 @@
   <div id="questions-container"></div>
   <div class="mb-3">
     <label for="assigned_users" class="form-label">Assign to Users</label>
-    <select multiple class="form-select" id="assigned_users" name="assigned_users">
+    <select multiple class="form-select" id="assigned_users" name="assigned_users" required>
       {% for user in users %}
         <option value="{{ user.id }}">{{ user.email }}</option>
       {% endfor %}

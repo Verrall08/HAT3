@@ -98,9 +98,9 @@ def logout():
 @app.route('/quiz')
 @login_required
 def quiz():
-    quizzes = Quiz.query.filter(Quiz.assigned_users.any(id=current_user.id)).all()
+    quizzes = Quiz.query.filter(Quiz.assigned_users.any(id=current_user.id), Quiz.hidden == False).all()
     submitted_ids = set(
-        str(sub.quiz_id) for sub in QuizSubmission.query.filter_by(id=current_user.id).all()
+        str(sub.quiz_id) for sub in QuizSubmission.query.filter_by(id=current_user.id, hidden=False).all()
     )
     quizzes_to_show = [quiz for quiz in quizzes if str(quiz.id) not in submitted_ids]
     return render_template('quiz.html', quizzes=quizzes_to_show, submitted_ids=submitted_ids)
@@ -122,6 +122,9 @@ def manage_quiz():
         if not title or num_questions < 1:
             flash('Quiz title and number of questions are required.', 'danger')
             return redirect(url_for('manage_quiz'))
+        if not assigned_user_ids:
+            flash('You must assign the quiz to at least one user.', 'danger')
+            return
         quiz = Quiz(title=title)
         db.session.add(quiz)
         db.session.commit()
@@ -165,7 +168,7 @@ def manage_quiz():
 
         flash('Quiz created and sent to selected users!', 'success')
         return redirect(url_for('manage_quiz'))
-    quizzes = Quiz.query.all()
+    quizzes = Quiz.query.filter_by(hidden=False).all()
     return render_template('manage_quiz.html', quizzes=quizzes, users=users)
 
 @app.route('/delete_quiz/<int:quiz_id>', methods=['POST'])
@@ -174,13 +177,18 @@ def delete_quiz(quiz_id):
     quiz = db.session.get(Quiz, quiz_id)
     if quiz is None:
         abort(404)
-    # Delete all questions related to this quiz
-    Question.query.filter_by(quiz_id=quiz.id).delete()
-    Quiz.query.filter_by(id=quiz.id).delete()
-    QuizSubmission.query.filter_by(quiz_id=quiz.id).delete()
-    # how to delete the quiz assignments?
+    # Soft delete: set hidden=True for quiz, its questions, assignments, and submissions
+    quiz.hidden = True
+    for question in Question.query.filter_by(quiz_id=quiz.id).all():
+        question.hidden = True
+    for submission in QuizSubmission.query.filter_by(quiz_id=quiz.id).all():
+        submission.hidden = True
+    # For assignments, if it's a table, use an update statement
+    db.session.execute(
+        QuizAssignments.update().where(QuizAssignments.c.quiz_id == quiz.id).values(hidden=True)
+    )
     db.session.commit()
-    flash('Quiz and its questions have been deleted.', 'success')
+    flash('Quiz and its questions have been hidden.', 'success')
     return redirect(url_for('existing_quizzes'))
 
 @app.route("/dashboard")
@@ -315,7 +323,7 @@ def admin_mark_quiz(submission_id):
 def existing_quizzes():
     if not hasattr(current_user, 'is_admin') or not current_user.is_admin:
         return redirect(url_for('dashboard'))
-    quizzes = Quiz.query.all()
+    quizzes = Quiz.query.filter_by(hidden=False).all()
     return render_template('existing_quizzes.html', quizzes=quizzes)
 
 @app.route("/my_scores")
@@ -324,7 +332,8 @@ def my_scores():
     # Get all marked submissions for the current user
     marked_submissions = QuizSubmission.query.filter_by(
         user_id=current_user.id, 
-        marked=True
+        marked=True,
+        hidden=False
     ).all()
 
     quizzes_to_delete = set()
@@ -354,6 +363,28 @@ def my_scores():
     db.session.commit()
     
     return render_template("my_scores.html", submissions=marked_submissions)
+
+@app.route('/toggle_quiz_visibility/<int:quiz_id>', methods=['POST'])
+@login_required
+def toggle_quiz_visibility(quiz_id):
+    if not current_user.is_admin:
+        abort(403)
+    quiz = db.session.get(Quiz, quiz_id)
+    if not quiz:
+        abort(404)
+    quiz.hidden = not quiz.hidden
+    db.session.commit()
+    return redirect(url_for('existing_quizzes'))
+
+@app.route('/toggle_score_visibility/<int:submission_id>', methods=['POST'])
+@login_required
+def toggle_score_visibility(submission_id):
+    submission = QuizSubmission.query.get_or_404(submission_id)
+    if submission.user_id != current_user.id:
+        abort(403)
+    submission.hidden = not submission.hidden
+    db.session.commit()
+    return redirect(url_for('my_scores'))
 
 if __name__ == "__main__":
     """
