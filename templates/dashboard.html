@@ -1,120 +1,123 @@
 {% extends "base.html" %}
 {% block title %}Dashboard{% endblock %}
 {% block content %}
-{% if current_user.is_admin %}
-  <h2>Welcome, {{ current_user.email }}!</h2>
-  <p>This is your dashboard. you are super admin</p>
-  <div class="row row-cols-1 row-cols-md-3 g-4">
-
-  <div class="col">
-    <div class="card h-100 shadow-sm border-0 bg-light hover-card">
-      <div class="card-body text-center">
-        <i class="fas fa-user-cog fa-2x mb-3 text-primary"></i>
-        <h5 class="card-title">Quiz Creater</h5>
-        <p class="card-text">Create quizes here</p>
-        <a href="{{ url_for('manage_quiz') }}" class="btn btn-primary">Create Quizes</a>
-      </div>
-    </div>
-  </div>
-
-  <div class="col">
-    <div class="card h-100 shadow-sm border-0 bg-light hover-card">
-      <div class="card-body text-center">
-        <i class="fas fa-user-cog fa-2x mb-3 text-primary"></i>
-        <h5 class="card-title">Existing Quizes</h5>
-        <p class="card-text">Manage your pre existing quizes</p>
-        <a href="{{ url_for('existing_quizzes') }}" class="btn btn-primary">Existing Quizes</a>
-      </div>
-    </div>
-  </div>
-
-  <div class="col">
-    <div class="card h-100 shadow-sm border-0 bg-light hover-card">
-      <div class="card-body text-center">
-        <i class="fas fa-user-cog fa-2x mb-3 text-primary"></i>
-        <h5 class="card-title">Mark Quizes</h5>
-        <p class="card-text">Mark Finished Quizes</p>
-        <a href="{{ url_for('admin_mark_quizzes') }}" class="btn btn-primary">Mark Quizes</a>
-      </div>
-    </div>
-  </div>
-
-  <div class="col">
-    <div class="card h-100 shadow-sm border-0 bg-light hover-card">
-      <div class="card-body text-center">
-        <i class="fas fa-user-cog fa-2x mb-3 text-primary"></i>
-        <h5 class="card-title">Your Account</h5>
-        <p class="card-text">Change your password here.</p>
-        <a href="{{ url_for('account') }}" class="btn btn-success">Manage Account</a>
-      </div>
-    </div>
-  </div>
-  
-  <div class="col">
-    <div class="card h-100 shadow-sm border-0 bg-light hover-card">
-      <div class="card-body text-center">
-        <i class="fas fa-users fa-2x mb-3 text-secondary"></i>
-        <h5 class="card-title">User Directory</h5>
-        <p class="card-text">View and manage all user accounts.</p>
-        <a href="{{ url_for('users') }}" class="btn btn-dark">View Users</a>
-      </div>
-    </div>
-  </div>
-
-  <div class="col">
-    <div class="card h-100 shadow-sm border-0 bg-light hover-card">
-      <div class="card-body text-center">
-        <i class="fas fa-sign-out-alt fa-2x mb-3 text-danger"></i>
-        <h5 class="card-title">Logout</h5>
-        <p class="card-text">Log out of your admin session.</p>
-        <a href="{{ url_for('logout') }}" class="btn btn-danger">Logout</a>
-      </div>
-    </div>
-  </div>
-
+<div class="dashboard-header text-center">
+  <i class="fas fa-tachometer-alt fa-lg me-2 text-primary"></i>
+  Welcome, {{ current_user.email }}!
 </div>
-{% else %}
+<div class="dashboard-sub text-center">
+  {% if current_user.is_admin %}
+    <span class="badge bg-primary">Admin</span>
+    <span class="ms-2">Manage quizzes, users, and more below.</span>
+  {% else %}
+    <span class="badge bg-success">User</span>
+    <span class="ms-2">Access your quizzes and scores below.</span>
+  {% endif %}
+</div>
 
-<div class="row row-cols-1 row-cols-md-3 g-4">
-  <div class="col">
-    <div class="card h-100 shadow-sm border-0 bg-light hover-card">
-      <div class="card-body text-center">
-        <i class="fas fa-user-cog fa-2x mb-3 text-primary"></i>
-        <h5 class="card-title">Quiz</h5>
-        <p class="card-text">Do your Set Quizes here</p>
-        <a href="{{ url_for('quiz') }}" class="btn btn-primary">Quiz</a>
+<div class="row row-cols-1 row-cols-md-3 g-4 justify-content-center">
+  {% if current_user.is_admin %}
+    <div class="col">
+      <div class="card h-100 shadow-sm border-0 bg-white">
+        <div class="card-body text-center">
+          <i class="fas fa-plus-circle fa-2x mb-3 text-primary"></i>
+          <h5 class="card-title">Quiz Creator</h5>
+          <p class="card-text">Create new quizzes for users.</p>
+          <a href="{{ url_for('manage_quiz') }}" class="btn btn-outline-primary w-100">Create Quizzes</a>
+        </div>
       </div>
     </div>
-  </div>
-<div class="col">
-    <div class="card h-100 shadow-sm border-0 bg-light hover-card">
-      <div class="card-body text-center">
-        <i class="fas fa-user-cog fa-2x mb-3 text-primary"></i>
-        <h5 class="card-title">Your Account</h5>
-        <p class="card-text">Change your password here.</p>
-        <a href="{{ url_for('account') }}" class="btn btn-success">Manage Account</a>
+    <div class="col">
+      <div class="card h-100 shadow-sm border-0 bg-white">
+        <div class="card-body text-center">
+          <i class="fas fa-list-alt fa-2x mb-3 text-info"></i>
+          <h5 class="card-title">Existing Quizzes</h5>
+          <p class="card-text">View and manage all quizzes.</p>
+          <a href="{{ url_for('existing_quizzes') }}" class="btn btn-outline-info w-100">Existing Quizzes</a>
+        </div>
       </div>
     </div>
-  </div>
-  <div class="col">
-    <div class="card h-100 shadow-sm border-0 bg-light hover-card">
-      <div class="card-body text-center">
-        <i class="fas fa-chart-bar fa-2x mb-3 text-success"></i>
-        <h5 class="card-title">My Quiz Scores</h5>
-        <p class="card-text">View your scores for completed quizzes</p>
-        <a href="{{ url_for('my_scores') }}" class="btn btn-success">View Scores</a>
+    <div class="col">
+      <div class="card h-100 shadow-sm border-0 bg-white">
+        <div class="card-body text-center">
+          <i class="fas fa-marker fa-2x mb-3 text-warning"></i>
+          <h5 class="card-title">Mark Quizzes</h5>
+          <p class="card-text">Mark and review finished quizzes.</p>
+          <a href="{{ url_for('admin_mark_quizzes') }}" class="btn btn-outline-warning w-100">Mark Quizzes</a>
+        </div>
       </div>
     </div>
-  </div>
-  <div class="col">
-    <div class="card h-100 shadow-sm border-0 bg-light hover-card">
-      <div class="card-body text-center">
-        <i class="fas fa-sign-out-alt fa-2x mb-3 text-danger"></i>
-        <h5 class="card-title">Logout</h5>
-        <p class="card-text">Log out of your session.</p>
-        <a href="{{ url_for('logout') }}" class="btn btn-danger">Logout</a>
+    <div class="col">
+      <div class="card h-100 shadow-sm border-0 bg-white">
+        <div class="card-body text-center">
+          <i class="fas fa-user-cog fa-2x mb-3 text-secondary"></i>
+          <h5 class="card-title">Your Account</h5>
+          <p class="card-text">Change your email or password.</p>
+          <a href="{{ url_for('account') }}" class="btn btn-outline-secondary w-100">Manage Account</a>
+        </div>
       </div>
     </div>
-  </div>
-{% endif %}
+    <div class="col">
+      <div class="card h-100 shadow-sm border-0 bg-white">
+        <div class="card-body text-center">
+          <i class="fas fa-users fa-2x mb-3 text-dark"></i>
+          <h5 class="card-title">User Directory</h5>
+          <p class="card-text">View and manage all user accounts.</p>
+          <a href="{{ url_for('users') }}" class="btn btn-outline-dark w-100">View Users</a>
+        </div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card h-100 shadow-sm border-0 bg-white">
+        <div class="card-body text-center">
+          <i class="fas fa-sign-out-alt fa-2x mb-3 text-danger"></i>
+          <h5 class="card-title">Logout</h5>
+          <p class="card-text">Log out of your admin session.</p>
+          <a href="{{ url_for('logout') }}" class="btn btn-outline-danger w-100">Logout</a>
+        </div>
+      </div>
+    </div>
+  {% else %}
+    <div class="col">
+      <div class="card h-100 shadow-sm border-0 bg-white">
+        <div class="card-body text-center">
+          <i class="fas fa-question-circle fa-2x mb-3 text-primary"></i>
+          <h5 class="card-title">Quiz</h5>
+          <p class="card-text">Take your assigned quizzes here.</p>
+          <a href="{{ url_for('quiz') }}" class="btn btn-outline-primary w-100">Quiz</a>
+        </div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card h-100 shadow-sm border-0 bg-white">
+        <div class="card-body text-center">
+          <i class="fas fa-user-cog fa-2x mb-3 text-secondary"></i>
+          <h5 class="card-title">Your Account</h5>
+          <p class="card-text">Change your email or password.</p>
+          <a href="{{ url_for('account') }}" class="btn btn-outline-secondary w-100">Manage Account</a>
+        </div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card h-100 shadow-sm border-0 bg-white">
+        <div class="card-body text-center">
+          <i class="fas fa-chart-bar fa-2x mb-3 text-success"></i>
+          <h5 class="card-title">My Quiz Scores</h5>
+          <p class="card-text">View your scores for completed quizzes.</p>
+          <a href="{{ url_for('my_scores') }}" class="btn btn-outline-success w-100">View Scores</a>
+        </div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card h-100 shadow-sm border-0 bg-white">
+        <div class="card-body text-center">
+          <i class="fas fa-sign-out-alt fa-2x mb-3 text-danger"></i>
+          <h5 class="card-title">Logout</h5>
+          <p class="card-text">Log out of your session.</p>
+          <a href="{{ url_for('logout') }}" class="btn btn-outline-danger w-100">Logout</a>
+        </div>
+      </div>
+    </div>
+  {% endif %}
+</div>
 {% endblock %}

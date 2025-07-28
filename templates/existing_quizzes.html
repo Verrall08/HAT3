@@ -15,6 +15,7 @@
         {% else %}
           <em>No users assigned</em>
         {% endif %}
+        <br>
         <form method="POST" action="{{ url_for('delete_quiz', quiz_id=quiz.id) }}" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this quiz?');">
           <button type="submit" class="btn btn-danger btn-sm">Delete</button>
         </form>
@@ -26,8 +27,8 @@
           {% endif %}
         </form>
       </li>
-  {% endfor %}
+    {% endfor %}
   {% else %}
-    <div class="alert alert-info">No existing quizzes at the moment.</div>
+     <div class="alert alert-info">No existing quizzes at the moment.</div>
   {% endif %}
 {% endblock %}

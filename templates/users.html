@@ -12,6 +12,7 @@
       <th>ID</th>
       <th>Email</th>
       <th>Admin</th>
+      <th>Action</th>
     </tr>
   </thead>
   <tbody>
@@ -25,6 +26,15 @@
       <td>{{ user.email }}</td>
       <!-- Show 'Yes' if user is admin, otherwise 'No' -->
       <td>{{ 'Yes' if user.is_admin else 'No' }}</td>
+      <td>
+        <form method="POST" action="{{ url_for('toggle_admin', user_id=user.id) }}" style="display:inline;">
+          {% if user.is_admin %}
+            <button type="submit" class="btn btn-warning btn-sm">Remove Admin</button>
+          {% else %}
+            <button type="submit" class="btn btn-success btn-sm">Make Admin</button>
+          {% endif %}
+        </form>
+      </td>
     </tr>
     {% endfor %}
   </tbody>  

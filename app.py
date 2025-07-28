@@ -98,12 +98,18 @@ def logout():
 @app.route('/quiz')
 @login_required
 def quiz():
-    quizzes = Quiz.query.filter(Quiz.assigned_users.any(id=current_user.id), Quiz.hidden == False).all()
+    # Get all quizzes assigned to the user and not hidden/deleted
+    quizzes = Quiz.query.filter(
+        Quiz.assigned_users.any(id=current_user.id),
+        Quiz.hidden == False  # or Quiz.deleted == False if you use 'deleted'
+    ).all()
+    # Get IDs of quizzes the user has already submitted
     submitted_ids = set(
-        str(sub.quiz_id) for sub in QuizSubmission.query.filter_by(id=current_user.id, hidden=False).all()
+        sub.quiz_id for sub in QuizSubmission.query.filter_by(user_id=current_user.id).all()
     )
-    quizzes_to_show = [quiz for quiz in quizzes if str(quiz.id) not in submitted_ids]
-    return render_template('quiz.html', quizzes=quizzes_to_show, submitted_ids=submitted_ids)
+    # Only show quizzes the user has NOT submitted
+    quizzes_to_show = [quiz for quiz in quizzes if quiz.id not in submitted_ids]
+    return render_template('quiz.html', quizzes=quizzes_to_show)
 
 @app.route('/manage_quiz', methods=['GET', 'POST'])
 @login_required
@@ -201,20 +207,44 @@ def dashboard():
 @login_required
 def account():
     """
-    Allow the logged-in user to update their email.
+    Allow the logged-in user to update their email and password.
     - Shows a form prefilled with the current email.
     - Validates and saves new email if submitted.
+    - Handles password change if fields are filled.
     """
-    # Prefill form with the current user's email
     form = EditAccountForm(original_email=current_user.email)
     if form.validate_on_submit():
-        # Update the user's email
-        current_user.email = form.email.data
-        db.session.commit()
-        flash("Your account has been updated.", "success")
+        # Update email if changed
+        if form.email.data != current_user.email:
+            current_user.email = form.email.data
+            db.session.commit()
+            flash("Your email has been updated.", "success")
+
+        # Handle password change if fields are filled
+        current_password = request.form.get("current_password", "")
+        new_password = request.form.get("new_password", "")
+        confirm_password = request.form.get("confirm_password", "")
+
+        if current_password or new_password or confirm_password:
+            if not current_user.check_password(current_password):
+                flash("Current password is incorrect.", "danger")
+                return render_template("edit_account.html", form=form)
+            if not new_password:
+                flash("New password cannot be empty.", "danger")
+                return render_template("edit_account.html", form=form)
+            if new_password != confirm_password:
+                flash("New passwords do not match.", "danger")
+                return render_template("edit_account.html", form=form)
+            if len(new_password) < 6:
+                flash("New password must be at least 6 characters.", "danger")
+                return render_template("edit_account.html", form=form)
+            current_user.set_password(new_password)
+            db.session.commit()
+            flash("Your password has been updated.", "success")
+
         return redirect(url_for("account"))
     elif request.method == "GET":
-        form.email.data = current_user.email  # Fill in the email when the page loads
+        form.email.data = current_user.email
     return render_template("edit_account.html", form=form)
 
 
@@ -385,6 +415,23 @@ def toggle_score_visibility(submission_id):
     submission.hidden = not submission.hidden
     db.session.commit()
     return redirect(url_for('my_scores'))
+
+@app.route('/toggle_admin/<int:user_id>', methods=['POST'])
+def toggle_admin(user_id):
+    user = User.query.get(user_id)
+    if user:
+        # If trying to remove admin from the last admin, prevent it
+        if user.is_admin:
+            admin_count = User.query.filter_by(is_admin=True).count()
+            if admin_count <= 1:
+                flash("At least one user must remain an admin.", "danger")
+                return redirect(url_for('users'))
+        user.is_admin = not user.is_admin
+        db.session.commit()
+        flash(f"User {user.email} admin status changed.", "success")
+    else:
+        flash("User not found.", "danger")
+    return redirect(url_for('users'))
 
 if __name__ == "__main__":
     """

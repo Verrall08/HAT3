@@ -31,7 +31,7 @@
             {{ total_points }}
           </td>
           <td>
-            {% if submission.marked_at %}
+            {% if submission.submitted_at %}
               {{ submission.submitted_at.strftime('%Y-%m-%d %H:%M') }}
             {% else %}
               N/A
