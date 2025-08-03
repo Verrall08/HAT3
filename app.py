@@ -379,7 +379,7 @@ def my_scores():
             # If all assigned users have a marked submission, delete the quiz
             if all(sub.marked for sub in all_submissions) and len(all_submissions) == len(assigned_user_ids):
                 # quizzes_to_delete.add(quiz.id)
-            
+
                 db.session.commit()
     
     # Delete quizzes that all assigned users have marked submissions
