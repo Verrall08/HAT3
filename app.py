@@ -367,7 +367,7 @@ def my_scores():
     ).all()
 
     quizzes_to_delete = set()
-    
+    # Check if all assigned users have marked submissions for each quiz
     for submission in marked_submissions:
         quiz = submission.quiz
         if quiz:
